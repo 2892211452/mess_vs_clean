@@ -3,7 +3,11 @@
 import torch as torch
 import torch.nn as nn
 
+import PIL.Image as Image
+import os
+from torchvision import transforms as transforms
 
+import time
 import json
 import os
 
@@ -21,7 +25,7 @@ def resize_image(image, height=IMAGE_SIZE, width=IMAGE_SIZE):
     h, w, _ = image.shape  # (237, 237, 3)
 
     # 对于长宽不相等的图片，找到最长的一边
-    longest_edge = max(h, w)
+    longest_edge = min(h, w)
 
     # 计算短边需要增加多上像素宽度使其与长边等长
     if h < longest_edge:
@@ -61,14 +65,32 @@ def read_path(path_name, images, labels):
             read_path(full_path, images, labels)
         else:  # 文件
             if dir_item.endswith('.png'):
-                image = cv2.imread(full_path)
-                image = resize_image(image, IMAGE_SIZE, IMAGE_SIZE)
 
-                # 放开这个代码，可以看到resize_image()函数的实际调用效果
-                # cv2.imwrite('1.jpg', image)
+                #进行数据增强
+                im  = Image.open(full_path)
 
-                images.append(image)
-                labels.append(path_name.split('\\')[-1])
+                #大小随机截取
+                ims =[]
+
+                for i in range(2):
+                    new_img = transforms.RandomCrop(200)(im) # 随机裁剪出100x100的区域
+                    for j in range(2):
+                        #生成随机数作为int
+                        a = np.random.randint(0,360)
+
+                        new_img1 = transforms.RandomRotation(a)(new_img)  
+                        new_img1= cv2.cvtColor(np.asarray(new_img1),cv2.COLOR_RGB2BGR)   #随机旋转45度
+                        #ims.append(new_img1)
+                        
+                        image = new_img1
+                        image = cv2.imread(full_path)
+                        image = resize_image(image, IMAGE_SIZE, IMAGE_SIZE)
+
+                        # 放开这个代码，可以看到resize_image()函数的实际调用效果
+                        # cv2.imwrite('1.jpg', image)
+
+                        images.append(image)
+                        labels.append(path_name.split('\\')[-1])
 
     return images, labels
 
@@ -91,7 +113,6 @@ def load_dataset(path_name, images, labels):
 
 def change_lable(lable,max=2, me="me"):
     temp = np.zeros((len(lable), max), dtype=np.int)
-    print(temp.shape)
     for index,item in enumerate(lable):
    
         if item.endswith('clean'):
@@ -111,7 +132,8 @@ if __name__ == '__main__':
     labels = []
     images, labels= load_dataset("/home/lwl/code/python/pytorch/mess_vs_clean/images/train", images, labels)
     images= images/256
-    print(images, labels)
+    print(images.shape, labels.shape)
+
 
     t = torch.tensor(labels)
         
