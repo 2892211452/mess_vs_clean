@@ -129,7 +129,9 @@ def getAc(model):
             if index ==temp:
                 count= count+1
         
-        print('当前测试集的正确率')
+        print('当前测试集的正确率')64).to(device))
+        # print(y1)
+        # print(labels[5])
         ac = count / Tlabels.size(0)
         return ac
 
@@ -140,7 +142,7 @@ if  __name__ == "__main__":
     vgg = CNN(2).to(device)
     print(vgg)
 
-    Vggmodel = models.vgg19(pretrained=True)
+    Vggmodel = models.vgg11(pretrained=True)
 
     #禁止求导,让数据不更新
     for parma in Vggmodel.parameters():

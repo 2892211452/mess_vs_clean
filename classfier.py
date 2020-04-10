@@ -26,8 +26,15 @@ class CNN(nn.Module):
         )
         
         self.normal = nn.BatchNorm2d(16) # 数据归一化,防止过拟合
-
         self.conv2=nn.Sequential(#(16,32,32)
+            nn.Conv2d(16,16,5,1,2),#(16,32,32)
+            nn.ReLU(),#(16,32,32)
+        )
+        self.conv3=nn.Sequential(#(16,32,32)
+            nn.Conv2d(16,16,5,1,2),#(16,32,32)
+            nn.ReLU(),#(16,32,32)
+        )
+        self.conv4=nn.Sequential(#(16,32,32)
             nn.Conv2d(16,32,5,1,2),#(32,32,32)
             nn.ReLU(),#(32,32,32)
             nn.MaxPool2d(2)#(32,16,16)
@@ -39,20 +46,23 @@ class CNN(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(32*16*16,1000),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(0.2, inplace=False),
 
             nn.Linear(1000,100),
             nn.ReLU(True),
-            nn.Dropout(0.2),
+            nn.Dropout(0.5, inplace=False),
 
-            nn.Linear(100,num_classes)
+            nn.Linear(100,num_classes),
+            nn.LogSoftmax(dim=1)
         )
 
     #定义前向传播过程，过程名字不可更改，因为这是重写父类的方法
     def forward(self,x):
         x = self.conv1( x )
+        x= self.conv2(x)
+        x= self.conv3(x)
         x = self.normal(x)
-        x = self.conv2( x ) #(batch,32,16,16)
+        x = self.conv4( x ) #(batch,32,16,16)
         x= self.dropout(x)
         x=x.view(x.size(0),-1) #(batch,32*7*7)
         output=self.classifier(x)
@@ -143,10 +153,22 @@ if  __name__ == "__main__":
     labels = []
     images, labels= load_dataset(filePath+"/images/train", images, labels)
     images= images/256
-    images = torch.tensor(images).float().to(device)
-    labels = torch.tensor(labels.astype(float)).to(device)
+    images = torch.tensor(images).float()
+    labels = torch.tensor(labels.astype(float))
+    
 
     images = images.view(images.size(0), 3, 64, 64)
+
+
+    torch_dataset = Data.TensorDataset(images, labels) #将x,y读取，转换成Tensor格式
+    loader = Data.DataLoader(
+        dataset=torch_dataset,      # torch TensorDataset format
+        batch_size=30,      # 最新批数据
+        shuffle=True,               # 是否随机打乱数据
+        num_workers=2,              # 用于加载数据的子进程
+    )
+
+
     train = True
 
     #绘图所用的值
@@ -160,32 +182,34 @@ if  __name__ == "__main__":
 
       
         for step in range(200):
+            for index, (batch_x, batch_y) in enumerate(loader):  # 每个训练步骤
+                batch_x =batch_x.to(device)
+                batch_y =batch_y.to(device).float()
+                pre = vgg(batch_x.float())
 
-            pre = vgg(images.float())
+                loss  = loss_F(pre, batch_y)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            loss  = loss_F(pre, labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                if step % 3 ==0 :
+                    print("the step " +str(step) +" the loss is"+ str(loss))
+                    ac = getAc(vgg)
+                    # time.sleep(1)
+                    print(ac)
+                    Ty.append(ac)
+                    
+                    x.append(step)
+                    y.append(loss)
 
-            if step % 1 ==0 :
-                print("the step " +str(step) +" the loss is"+ str(loss))
-                ac = getAc(vgg)
-                # time.sleep(1)
-                print(ac)
-            Ty.append(ac)
-            
-            x.append(step)
-            y.append(loss)
+                plt.cla()
+                #ax.plot(x,y)
+                ax.plot(x,Ty)
 
-            plt.cla()
-            #ax.plot(x,y)
-            ax.plot(x,Ty)
+                plt.pause(0.003)
 
-            plt.pause(0.003)
-
-            
-            vgg.eval()
+                
+                vgg.eval()
 
         torch.save(vgg, filePath+'/mess_clean_model.h5') 
     else:

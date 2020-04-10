@@ -124,6 +124,9 @@ def change_lable(lable,max=2, me="me"):
     print(lable.shape)
 
 
+import torch
+import torch.utils.data as Data #将数据分批次需要用到它
+
 
 
 if __name__ == '__main__':
@@ -131,6 +134,32 @@ if __name__ == '__main__':
     images = []
     labels = []
     images, labels= load_dataset("/home/lwl/code/python/pytorch/mess_vs_clean/images/train", images, labels)
+
+    images= images/256
+    images = torch.tensor(images).float()
+    labels = torch.tensor(labels.astype(float))
+
+    images = images.view(images.size(0), 3, 64, 64)
+
+    torch_dataset = Data.TensorDataset(images, labels) #将x,y读取，转换成Tensor格式
+    loader = Data.DataLoader(
+        dataset=torch_dataset,      # torch TensorDataset format
+        batch_size=30,      # 最新批数据
+        shuffle=True,               # 是否随机打乱数据
+        num_workers=2,              # 用于加载数据的子进程
+    )
+    
+    def show_batch():
+        for epoch in range(3):   # 对整个数据集进行3次培训
+            for step, (batch_x, batch_y) in enumerate(loader):  # 每个训练步骤
+                # 此处省略一些训练数据步骤...
+                print('Epoch: ', epoch, '| Step: ', step, '| batch x: ',
+                    batch_x.size(), '| batch y: ', batch_y.size())
+    
+    if __name__ == '__main__':
+        show_batch()
+
+
     images= images/256
     print(images.shape, labels.shape)
 
