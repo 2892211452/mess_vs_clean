@@ -72,9 +72,9 @@ def read_path(path_name, images, labels):
                 #大小随机截取
                 ims =[]
 
-                for i in range(2):
+                for i in range(1):
                     new_img = transforms.RandomCrop(200)(im) # 随机裁剪出100x100的区域
-                    for j in range(2):
+                    for j in range(1):
                         #生成随机数作为int
                         a = np.random.randint(0,360)
 
